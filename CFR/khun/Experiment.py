@@ -6,31 +6,31 @@ def traverse(a, env, i, players):
     env = deepcopy(env)
     r = dict()
     g = 0
-    if env.is_terminal(): return env.utility()[i.i]
-    if a is not None: env.sample_action(i.i, a)
-    if env.is_terminal(): return env.utility()[i.i]
+    if a is not None: env.process_action(i, a)
+    if env.is_terminal(): return env.utility()[i]
+
+    infoset = env.N[i].I
 
     t = env.get_next_turn()
-    while t != i.i:
-
-        if env.is_terminal(): return env.utility()[i.i]
+    while t != i:
+        if env.is_terminal(): return env.utility()[i]
         if t != 'c':
-            a = players[t].sample(env.N[t].I)
-            prob = players[t].get_action_probability(env.N[t].I, a)
-            players[t].accum_pol(env.N[t].I, a, prob)
+            a = players[t].sample(infoset)
+            prob = players[t].get_action_probability(infoset, a)
+            players[t].accum_pol(infoset, a, prob)
         else: a = env.N['c'].sample()
 
-        env.sample_action(t, a)
-        if env.is_terminal(): return env.utility()[i.i]
+        env.process_action(t, a)
+        if env.is_terminal(): return env.utility()[i]
         t = env.get_next_turn()
 
-    for a in i.c_Regret[env.N[i.i].I].keys():
+    for a in players[i].c_Regret[env.N[i].I].keys():
         r[a] = traverse(a, env, i, players)
-        g += r[a] * (i.get_action_probability(env.N[i.i].I, a))
+        g += r[a] * (players[i].get_action_probability(infoset, a))
 
-    for a in i.c_Regret[env.N[i.i].I].keys():
+    for a in players[i].c_Regret[infoset].keys():
         reg = r[a] - g
-        i.update(env.N[i.i].I, a, reg)
+        players[i].update(infoset, a, reg)
 
     return g
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     env = KhunEnv(players)
     for t in tqdm(range(100000)):
         for j in range(1, 3, 1):
-            traverse(None, env, players[j], players)
+            traverse(None, env, j, players)
     print(players[1].get_average_strategy())
     print(players[1].count)
     print(players[2].get_average_strategy())
