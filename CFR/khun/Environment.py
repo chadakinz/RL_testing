@@ -1,95 +1,86 @@
+def result(history):
+    if history[0] == 'K': return 1, 2
+    elif history[1] == 'K': return 2, 1
+    elif history[0] == 'Q': return 1, 2
+    elif history[1] == 'Q': return 2, 1
 
-class KhunEnv:
-    def __init__(self, players):
-        self.N = players  # Players including chance, dictionary of id's that map onto player objects
-        self.history = tuple()
-        self.sequence = ['c', 'c', 1, 2, 1]
-        self.seq_id = 0
-        self.pot = 0
+def get_next_turn(history):
 
-    def get_next_turn(self):
-        return self.sequence[self.seq_id]
+    if len(history) < 2:
 
-    def process_action(self, i, a):
-        ### Update information sets for each player
-        if i == 'c':
-            if len(self.history) == 0:
-                self.N[1].card = a
-                self.pot += 1
-                self.N[1].stake += 1
-                self.N[1].I = (a,)
-            else:
-                self.N[2].card = a
-                self.pot += 1
-                self.N[2].stake += 1
-                self.N[2].I = (a,)
+        return 'c'
+    elif len(history) == 2 or len(history) == 4:
+        return 1
+    else:
+        return 2
 
+def get_infoset(history, i):
+    """
+    :param history: History of the current subtree
+    :param i: Player id
+    :return: Infoset for player i
+    """
+    if i == 1:
+        if len(history) > 2:
+            infoset = (history[0],) + (history[2:])
         else:
-            if a == 'B':
-                self.N[i].stake += 1
-                self.pot += 1
-            elif a == 'C':
-                self.N[i].stake += 1
-                self.pot += 1
-            self.N[1].I += (a,)
-            self.N[2].I += (a,)
-        self.history += (a,)
-        self.seq_id += 1
+            infoset = (history[0],)
 
+    else:
+        infoset = history[1:]
 
-    def is_terminal(self) -> bool:
+    return infoset
 
-        if self.history is None or len(self.history) <= 3:
-            return False
-        elif len(self.history) == 4:
-            if self.history[3] == 'P' or self.history[3] == 'C' or self.history[3] == 'F':
-                return True
-            else:
-                return False
-        else:
+def update_history(history, action):
+    return history + (action,)
+
+def is_terminal(history) -> bool:
+
+    if history is None or len(history) <= 3:
+        return False
+    elif len(history) == 4:
+        if history[3] == 'P' or history[3] == 'C' or history[3] == 'F':
             return True
-
-
-
-    def utility(self) -> dict:
-        u = dict()
-        winner, looser = self.winner()
-
-        if self.history[3] == 'P' or self.history[3] == 'C':
-            u[winner] = self.pot - self.N[1].stake
-            u[looser] = -self.N[2].stake
-        elif self.history[3] == 'F':
-            u[1] = self.pot - self.N[1].stake
-            u[2] = -self.N[2].stake
-
-        elif self.history[4] == 'C':
-            u[winner] = self.pot - self.N[1].stake
-            u[looser] = -self.N[2].stake
         else:
-            u[2] = self.pot - self.N[2].stake
-            u[1] = -self.N[1].stake
-        return u
+            return False
+    else:
+        return True
 
-    def winner(self):
-        if self.N[1].card == 'K': return 1, 2
-        elif self.N[2].card == 'K': return 2, 1
-        elif self.N[1].card == 'Q': return 1, 2
-        elif self.N[2].card == 'Q': return 2, 1
-    @staticmethod
-    def possible_actions(I) -> dict:
-        """
-        :param I:
-        :return dictionary that maps a|I to R(I,a) set to  0 initially:
-        """
-        if len(I) == 1:
-            return {'P': 0, 'B': 0}
-        elif len(I) == 2:
-            if I[1] == 'B':
-                return {'F': 0, 'C': 0}
+def utility(history) -> dict:
+    u = dict()
+    winner, looser = result(history)
 
-            elif I[1] == 'P':
-                return {'P': 0, 'B': 0}
-        elif len(I) == 3:
+    if history[3] == 'C':
+        u[winner] = 2
+        u[looser] = -2
+    elif history[3] == 'F':
+        u[1] = 1
+        u[2] = -1
+    elif history[3] == 'P':
+        u[winner] = 1
+        u[looser] = -1
+    elif history[4] == 'C':
+        u[winner] = 2
+        u[looser] = -2
+    elif history[4] == 'F':
+        u[1] = -1
+        u[2] = 1
+    return u
+
+def possible_actions(I) -> dict:
+    """
+    :param I:
+    :return dictionary that maps a|I to R(I,a) set to  0 initially:
+    """
+    if len(I) == 1:
+        return {'P': 0, 'B': 0}
+    elif len(I) == 2:
+        if I[1] == 'B':
             return {'F': 0, 'C': 0}
+
+        elif I[1] == 'P':
+            return {'P': 0, 'B': 0}
+    elif len(I) == 3:
+        return {'F': 0, 'C': 0}
 
 
