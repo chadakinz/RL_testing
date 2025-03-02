@@ -2,46 +2,45 @@ from copy import deepcopy
 from attr import *
 from Environment import *
 from tqdm import tqdm
-def traverse(a, env, i, players):
-    env = deepcopy(env)
-    r = dict()
-    g = 0
-    if a is not None: env.process_action(i, a)
-    if env.is_terminal(): return env.utility()[i]
+def traverse(history, i, curr_player, players):
+    if is_terminal(history): return utility(history)[i]
 
-    infoset = env.N[i].I
+    infoset = get_infoset(history, curr_player)
 
-    t = env.get_next_turn()
-    while t != i:
-        if env.is_terminal(): return env.utility()[i]
-        if t != 'c':
-            a = players[t].sample(infoset)
-            prob = players[t].get_action_probability(infoset, a)
-            players[t].accum_pol(infoset, a, prob)
-        else: a = env.N['c'].sample()
+    if curr_player == i:
+        r = dict()
+        g = 0
+        for a in players[i].c_Regret[infoset].keys():
+            next_history = update_history(history, a)
+            r[a] = traverse(next_history, i, get_next_turn(next_history), players)
+            g += r[a] * (players[i].get_action_probability(infoset, a))
 
-        env.process_action(t, a)
-        if env.is_terminal(): return env.utility()[i]
-        t = env.get_next_turn()
+        for a in players[i].c_Regret[infoset].keys():
+            reg = r[a] - g
+            players[i].update(infoset, a, reg)
 
-    for a in players[i].c_Regret[env.N[i].I].keys():
-        r[a] = traverse(a, env, i, players)
-        g += r[a] * (players[i].get_action_probability(infoset, a))
+        return g
 
-    for a in players[i].c_Regret[infoset].keys():
-        reg = r[a] - g
-        players[i].update(infoset, a, reg)
+    else:
+        if curr_player != 'c':
+            a = players[curr_player].sample(infoset)
+            prob = players[curr_player].get_action_probability(infoset, a)
+            players[curr_player].accum_pol(infoset, a, prob)
 
-    return g
+        else:  a = players['c'].sample(history)
 
+        next_history = update_history(history, a)
+        next_player = get_next_turn(next_history)
+
+        return traverse(next_history, i, next_player, players)
 
 
 if __name__ == '__main__':
     players = {1: Player(1), 2: Player(2), 'c': Chance()}
-    env = KhunEnv(players)
+
     for t in tqdm(range(100000)):
         for j in range(1, 3, 1):
-            traverse(None, env, j, players)
+            traverse(tuple(), j, get_next_turn(tuple()), players)
     print(players[1].get_average_strategy())
     print(players[1].count)
     print(players[2].get_average_strategy())

@@ -1,37 +1,22 @@
 import numpy as np
-import random
-from Environment import KhunEnv
-from enum import Enum
-
-
-class Deck:
-    def __init__(self):
-        self.cards = ['J', 'Q', 'K']
-        self.shuffle()
-
-    def shuffle(self):
-        random.shuffle(self.cards)
-    def deal_card(self):
-        return self.cards.pop()
-    def reset(self):
-        self.shuffle()
-        self.cards = ['J', 'Q', 'K']
-
+from Environment import possible_actions
 
 class Dict(dict):
     def __init__(self):
         super().__init__()
 
     def __setitem__(self, key, value):
-
         if key not in self:
-            value2 = KhunEnv.possible_actions(key)
+            value2 = possible_actions(key)
             super().__setitem__(key, value2)
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
+
         if key not in self:
-            value = KhunEnv.possible_actions(key)
+
+            value = possible_actions(key)
+
             super().__setitem__(key, value)
 
         return super().__getitem__(key)
@@ -40,16 +25,14 @@ class Dict(dict):
 class Chance:
     def __init__(self):
         self.i = 'c'
-        self.deck = Deck()
 
-    def sample(self):
-        self.deck.shuffle()
-        return self.deck.deal_card()
-
-    def reset(self):
-        self.deck.reset()
-
-
+    def sample(self, history):
+        deck = ['J', 'Q', 'K']
+        if len(history) == 0:
+            return np.random.choice(['J', 'Q', 'K'], p = [1/3, 1/3, 1/3], size = 1)[0]
+        else:
+            deck.remove(history[0])
+            return np.random.choice(deck, p = [1/2, 1/2], size = 1)[0]
 
 class Player:
     def __init__(self, i, epsilon = .6):
