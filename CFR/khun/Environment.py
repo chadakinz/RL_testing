@@ -2,20 +2,18 @@
 class KhunEnv:
     def __init__(self, players):
         self.N = players  # Players including chance, dictionary of id's that map onto player objects
-        self.H = tuple()
+        self.history = tuple()
         self.sequence = ['c', 'c', 1, 2, 1]
         self.seq_id = 0
         self.pot = 0
 
     def get_next_turn(self):
-
         return self.sequence[self.seq_id]
 
-
-    def sample_action(self, i, a):
+    def process_action(self, i, a):
         ### Update information sets for each player
         if i == 'c':
-            if len(self.H) == 0:
+            if len(self.history) == 0:
                 self.N[1].card = a
                 self.pot += 1
                 self.N[1].stake += 1
@@ -35,16 +33,16 @@ class KhunEnv:
                 self.pot += 1
             self.N[1].I += (a,)
             self.N[2].I += (a,)
-        self.H += (a,)
+        self.history += (a,)
         self.seq_id += 1
 
 
     def is_terminal(self) -> bool:
 
-        if self.H is None or len(self.H) <= 3:
+        if self.history is None or len(self.history) <= 3:
             return False
-        elif len(self.H) == 4:
-            if self.H[3] == 'P' or self.H[3] == 'C' or self.H[3] == 'F':
+        elif len(self.history) == 4:
+            if self.history[3] == 'P' or self.history[3] == 'C' or self.history[3] == 'F':
                 return True
             else:
                 return False
@@ -57,15 +55,14 @@ class KhunEnv:
         u = dict()
         winner, looser = self.winner()
 
-        if self.H[3] == 'P' or self.H[3] == 'C':
-
+        if self.history[3] == 'P' or self.history[3] == 'C':
             u[winner] = self.pot - self.N[1].stake
             u[looser] = -self.N[2].stake
-        elif self.H[3] == 'F':
+        elif self.history[3] == 'F':
             u[1] = self.pot - self.N[1].stake
             u[2] = -self.N[2].stake
 
-        elif self.H[4] == 'C':
+        elif self.history[4] == 'C':
             u[winner] = self.pot - self.N[1].stake
             u[looser] = -self.N[2].stake
         else:
