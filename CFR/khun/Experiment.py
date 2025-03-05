@@ -8,18 +8,18 @@ def traverse(history, i, curr_player, players):
     infoset = get_infoset(history, curr_player)
 
     if curr_player == i:
-        r = dict()
-        g = 0
+        action_utilities = dict()
+        counterfactual_value = 0
         for a in players[i].c_Regret[infoset].keys():
             next_history = update_history(history, a)
-            r[a] = traverse(next_history, i, get_next_turn(next_history), players)
-            g += r[a] * (players[i].get_action_probability(infoset, a))
+            action_utilities[a] = traverse(next_history, i, get_next_turn(next_history), players)
+            counterfactual_value += action_utilities[a] * (players[i].get_action_probability(infoset, a))
 
         for a in players[i].c_Regret[infoset].keys():
-            reg = r[a] - g
-            players[i].update(infoset, a, reg)
+            regret = action_utilities[a] - counterfactual_value
+            players[i].update(infoset, a, regret)
 
-        return g
+        return counterfactual_value
 
     else:
         if curr_player != 'c':
