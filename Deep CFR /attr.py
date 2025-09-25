@@ -1,29 +1,59 @@
-from environment import *
-class Dict(dict):
-    def __init__(self):
-        super().__init__()
 
-    def __setitem__(self, key, value):
-        if key not in self:
-            value2 = possible_actions(key)
-            super().__setitem__(key, value2)
-        super().__setitem__(key, value)
+import numpy as np
+import random
 
-    def __getitem__(self, key):
-
-        if key not in self:
-
-            value = possible_actions(key)
-
-            super().__setitem__(key, value)
-
-        return super().__getitem__(key)
-
-
-
+def normalize_infoset(infoset):
+    max_values = np.array([25, 25, 1, 25, 50, 1, 25, 50, 1, 25, 50, 1, 25, 50, 4])
+    return infoset/max_values
 def chance_action(action):
-    cards = []
-    indexs = np.random.randint(0, len(action[1]), size=(action[0],))
-    for i in indexs:
-        cards.append(action[1][i])
-    return cards
+    return random.sample(action[1], action[0])
+
+
+class Buffer:
+    def __init__(self, size):
+        self.size = size
+        self.cur_size = 0
+        self.buffer = []
+
+    def push(self, x):
+        if self.cur_size < self.size:
+            self.buffer.append(x)
+            self.cur_size += 1
+        else:
+            k = np.random.randint(0, self.cur_size - 1, size = (1,))
+            if k < self.size:
+                self.buffer[k] = x
+
+    def sample(self,k):
+        #print(f"buffer = {self.buffer}")
+        #print(len(self.buffer))
+        sample = random.sample(self.buffer, min(len(self.buffer), k))
+        data = []
+        value = []
+        s = 0
+
+        for i in sample:
+            data.append(i[0])
+            value.append(i[1]* i[2])
+            s += i[1]
+
+        return data, value, s
+
+    def sample_batch(self, start, end):
+        sample = self.buffer[start:end]
+        data = []
+        value = []
+        s = 0
+
+        for i in sample:
+            data.append(i[0])
+            value.append(i[1] * i[2])
+            s += i[1]
+
+        return data, value, s
+
+    def shuffle(self):
+        np.random.shuffle(self.buffer)
+
+    def __len__(self):
+        return len(self.buffer)
