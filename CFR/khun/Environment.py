@@ -5,14 +5,9 @@ def result(history):
     elif history[1] == 'Q': return 2, 1
 
 def get_next_turn(history):
-
-    if len(history) < 2:
-
-        return 'c'
-    elif len(history) == 2 or len(history) == 4:
-        return 1
-    else:
-        return 2
+    if len(history) < 2: return 'c'
+    elif len(history) == 2 or len(history) == 4: return 1
+    else: return 2
 
 def get_infoset(history, i):
     """
@@ -21,30 +16,16 @@ def get_infoset(history, i):
     :return: Infoset for player i
     """
     if i == 1:
-        if len(history) > 2:
-            infoset = (history[0],) + (history[2:])
-        else:
-            infoset = (history[0],)
-
-    else:
-        infoset = history[1:]
-
+        if len(history) > 2: infoset = (history[0],) + (history[2:])
+        else: infoset = (history[0],)
+    else: infoset = history[1:]
     return infoset
 
 def update_history(history, action):
     return history + (action,)
 
 def is_terminal(history) -> bool:
-
-    if history is None or len(history) <= 3:
-        return False
-    elif len(history) == 4:
-        if history[3] == 'P' or history[3] == 'C' or history[3] == 'F':
-            return True
-        else:
-            return False
-    else:
-        return True
+    return 'F' in history or 'C' in history
 
 def utility(history) -> dict:
     u = dict()

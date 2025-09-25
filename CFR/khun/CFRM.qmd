@@ -1,0 +1,269 @@
+---
+title: "Counterfactual Regret Minimization"
+subtitle: "CFR with Khun Poker"
+format: pdf
+bibliography: references.bib
+execute:
+  error: true
+kernel:
+  name: myenv1
+  display_name: "Python (myenv1)"
+  language: python
+include-in-header:
+  text: |
+    \usepackage{fvextra}
+    \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+---
+
+# Introduction
+Regret minimization is a theoretical technique utilized in game theory where the performance of an arbitrary algorithm
+$\mathcal{H}$, is compared against another theoretical algorithm $\mathcal{G}$. Regret is then defined as:
+$$
+\mathcal{R} = \mathcal{H} - \mathcal{G}
+$$
+The algorithm $\mathcal{H}$ is defined in this context as the comparison class.
+
+The concept of regret is broad, and there exists a multitude of valid regret mathing algorithms,
+although in this paper, I will be discussing one algorithm in particular--namely: counterfactual regret.
+
+# Backround
+To explain how counterfactual regret minimization works, first we must define a set of variables to describe an extensive
+form game played by two decision making players and one chance player.
+\begin{itemize}
+\item We first define the set $\mathcal{N} = \{1, 2, c\}$ which represents the players in our extensive form game. Here,
+players 1 and 2 are players that can change and update their strategies. Player $c$ represents chance, a player who plays a behaviour
+strategy, a static strategy that is known by players 1 and 2. Each player has perfect recall, meaning at every stage of the game,
+each player remembers the actions they took previously to get to that point.
+
+\item We now define histories. Let the set $H$ represent all possible sequence of actions
+(including the empty sequence) the players of a game can make to reach any node in the game tree. $h\in H$ is defined as a history,
+which consists of a sequence of actions to reach a node in the game tree. $Z \subset H$ represents the set of all possible
+terminal histories. Terminal histories are a sequence of actions that end on a leaf node in the game tree. We say that $h
+\sqsubseteq h'$ if from history $h$ we can reach $h'$. Then we can say that for all $h\in H,z \in Z \quad h \sqsubseteq z$ [@lanctot2009monte].
+
+\item An information set is defined as the sequence of actions a player has knowledge of at any node in the game tree.
+$\mathcal{I}_i$ represents the set of information sets for player $i$, for each node in the game tree. Then, $I_i(h) \in \mathcal{I}_i$
+represents the information set given to player $i$ at history $h$. $A(I_i)$ represents the set of actions player $i$ can make
+at information set $I$ [@lanctot2009monte].
+
+\item A strategy $\sigma_i(I)$, is defined as the mixed strategy of player $i$ at information set $I$. Where $\sigma_i(I,a)$
+is the probability that player $i$ plays action $a$ at information set $I$.
+
+\item $\pi_i^\sigma(h)$ represents the probability that player $i$ reaches history $h$ while playing the strategy $\sigma$,
+independent of the actions taken by other players. Then we can define $\pi^\sigma(h) = \prod_{i \in \mathcal{N}}\pi_i^\sigma(h)$,
+which represents the probability, given the strategy of each player, we reach a history $h$. $\pi_{-i}^\sigma(h)$ represents
+the probability of all players excluding $i$ reach history $h$. Finally, we define $\pi^\sigma(h,z) = \pi^\sigma(z)/\pi^\sigma(h)$,
+which represents the probability that from history $h$, we reach terminal history $z$.
+
+\end{itemize}
+
+# Immediate Counterfactual Regret
+
+Immediate counterfactual regret is the technique that was used to converge mixed strategies of extensive form, 2 player games,
+to an $\epsilon$ Nash equilibrium. To explain how it works, first we need to define the counterfactual value:
+$$
+v_i^{\sigma^t}(I) = \sum_{h\in I, z: h \sqsubseteq z} \pi_{-i}^{\sigma^t}(h) \pi^{\sigma^t}(h,z) u_i(z)
+$$
+At each time step t, each player (excluding chance) is given a new strategy $\sigma^t$. These strategies are used to compute
+the value of each information set by the chance we reach the set, multiplied by the probabilty we reach each terminal node from
+the current history, multiplied by the value we get from that terminal node. Here, $u_i(z)$ represents the utility we get
+from the terminal node $z$ [@lanctot2009monte].
+
+Next, we define the counterfactual value for each action $a$ in an information set $I$ such that:
+$$
+v_i^{\sigma^t}(I, a) = \sum_{h\in I, z: h \sqsubseteq z} \pi_{-i}^{\sigma^t}(ha) \pi^{\sigma^t}(ha,z) u_i(z)
+$$
+Finally, Immediate counter factual regret is defined as:
+$$
+R^T_{i,imm}(I, a) = \frac{1}{T}\sum_{t = 1}^T (v_i^{\sigma^t}(I, a) - v_i^{\sigma^t}(I))
+$$
+
+# Regret Matching
+
+Regret matching is the algorithm that is used to compute $\sigma^t_i$. That is, at every time step T:
+$$
+\begin{aligned}
+    \sigma_i^T(I, a) = \frac{R_{i, imm}^{T,+}(I,a)}{\sum_{a \in A(I)}R^{T,+}_{i,imm}(I,a)}, \\
+    R_{i, imm}^{T,+}(I,a) =max(0, R^T_{i,imm}(I,a))
+\end{aligned}
+$$
+The literature details that by using our regret matching algorithm for both players, eventually, through repeated traversal of our
+game tree traversals,
+$$
+\lim_{T \to \infty} \sum_{I \in \mathcal{I}} R^T_{i,imm} = 0
+$$
+When the average regret is 0, our strategy is said to be a Nash equilibrium. To explain why this is true, we first need to explain why
+regret matching is able to converge average regret to 0. This simple fact is a result of Blackwell's Approachability theorem,
+a derivation of Jon Von Neumann's minimax theorem.
+
+# Approachability
+
+Approachability was a concept created by David Blackwell to demonstrate how an algorithm could be constructed to converge
+a value to a set S. To fully understand where David Blackwell derived approachability, we must
+first understand Jon Von Neumann's Minimax theorem [@vonneumann1928].
+
+## Minimax Theorem
+
+In a two player, zero-sum, normal form game, players 1 and 2 can select any strategy from the sets
+$P = \Delta ^ r,\space Q = \Delta ^ s$ respectively. Where $\Delta ^n$ is a simplex in n space. The minimax theorem states
+that there exists strategies $p\in P$ and $q \in Q$ for players 1 and 2 such that :
+$$
+\max_{p \in P}\min_{q \in Q} b(p,q) = \min_{p \in P} \max_{q\in Q} b(p,q)
+$$
+Where
+$$
+b(p,q) = p^TAq, \quad A \in \mathbb{R}^{r \times s}
+$$
+and A is the payoff matrix of a zero-sum game [@vonneumann1928].
+---
+
+To see how this relates to approachability, David Blackwell defines a new game [@blackwell1956minimax]. In this game, two players
+play a normal form game n times. On each iteration, player 1 and player 2 choose strategies from sets $P$ and $Q$
+respectively. After choosing a strategy, each player receives a valued vector $x_i\in \mathbb{R}^N$. The strategies, picked
+by the players, depend on the values incurred at each stage of the game, where:
+$$
+\begin{aligned}
+    &f_n \in P: f_n(x_1, x_2, x_3, ... , x_n)\\
+    &g_n \in P: f_n(x_1, x_2, x_3, ... , x_n)
+\end{aligned}
+$$
+Then we can define sets $f$ and $g$, where:
+$$
+\begin{aligned}
+    &f = \{f_1, f_2, ... , f_n\}\\
+    &g = \{g_1, g_2, ... , g_n\}\\
+\end{aligned}
+$$
+The value $x$ incurred on iteration $i$ is chosen from matrix,
+$$
+M = \|m(i,j)\|, \quad  0 \leq i \leq r, 0 \leq j \leq s
+$$
+Where each element in the matrix $M$ is a probability distribution. Given a set $S$ in $N$ space, $S$ is said
+to be approachable with $f^*$ in M, if for every $\epsilon > 0$, there exists an $N_0$, such that for every $g$:
+$$
+Prob\{\delta_n \geq \epsilon \text{ for some } N_0\} < \epsilon
+$$
+Where $\delta_n$ is the shortest distance from the point $\frac{1}{n}\sum_{i=1}^n x_i$ to s.
+
+Then, it is said that S is excludable with $g^*$ in $M$, if there exists a $d>0$ such that for every $\epsilon > 0$, there
+is an $N_0$ such that for every $f$:
+$$
+Prob\{\delta_n \geq d \text{ for all } n \geq N_0\} > 1 - \epsilon
+$$
+
+Blackwell asserts that Jon Von Neumann's Minimax theorem could be described in terms of approachability/exclusivity when
+$N=1$. Then, with every M there exists number v and vectors $p \in P$ and $q \in Q$ such that the set $S = \{x \geq t\}$
+is approachable for $t \leq v$ with $f:f_n \equiv p$ and excludable for $t > v$ with $g:g_n \equiv q$ [@blackwell1956minimax]. To demonstrate, why
+this is true, let us assume that $p$ and $q$ are vectors that satisfy:
+$$
+\max_{p \in P}\min_{q \in Q} b(p,q) = \min_{p \in P} \max_{q\in Q} b(p,q)
+$$
+then, let us assume that $f:f_n \equiv p$ is approachable to $S$ and $g:g_n \equiv q$ is excludable. We will show that
+under these assumptions, from our definitions of approachability, we can derive the Minimax theorem.
+Given our set $M$ which holds probability distributions on each index $(i,j)$. Let $\hat{M} = \bar{m}$ be the average values
+of each distribution on index $(i,j)$, then:
+$$
+\begin{aligned}
+    &f:f_n \equiv p ,  \implies\\
+    &\frac{1}{n}\sum_{i = 1}^n f^T_i \hat{M} g_i = \frac{1}{n} \sum_{i = 1}^n p^T \hat{M} q
+\end{aligned}
+$$
+Let the set $S = \{ x \geq t\} : t = v$, then there exists an $N_0$ for an arbitrailiy small $\epsilon$, such that for every
+$g$:
+$$
+\begin{aligned}
+    &Prob\{\delta_n \geq \epsilon \text{ for some } N_0 \} < \epsilon \implies \\
+    &\min_{s \in S} |s - \frac{1}{N_0}\sum_{i=1}^{N_0} p^T \hat{M} g_i | = 0 \implies \\
+    &\frac{1}{N_0} \sum_{i=1}^{N_0}p^T\hat{M} g_i \geq v
+\end{aligned}
+$$
+Similarly:
+$$
+\begin{aligned}
+    &g : g_n \equiv q, \implies \\
+    &\frac{1}{n} \sum_{i=1}^n f^T_i\hat{M}g_i = \frac{1}{n} \sum_{i=1}^n f^T_i\hat{M}q
+\end{aligned}
+$$
+Then, because $q$ is excludable to the set $S = \{ x \geq t\} :t > v$, then when we set $t$ sufficiently close to $v$, we can
+say that there exists $N_0$ and $d>0$ for all $\epsilon > 0$ such that for all $f$:
+$$
+\begin{aligned}
+    &Prob\{\delta_n \geq d \text{ for all } n \geq N_0\} > 1 - \epsilon \implies \\
+    &\min_{s \in S} |s - \frac{1}{N_0}\sum_{i=1}^{N_0} f^T_i \hat{M} q | > 0 \implies \\
+    &\frac{1}{N_0}\sum_{i=1}^{N_0} f^T_i \hat{M} q \leq v
+\end{aligned}
+$$
+Thus,
+$$
+\begin{aligned}
+    &\frac{1}{N_0}\sum_{i=1}^{N_0} f^T_i \hat{M} q \leq v \leq  \frac{1}{N_0} \sum_{i=1}^{N_0}p^T\hat{M} g_i \implies \\
+    &\max_{f_i \in P} f_i^T \hat{M}q = v, \quad \min_{g_i \in Q} p^T\hat{M}g_i = v \implies \\
+    &\max_{f_i \in P} \min_{g_i \in Q} f_i^T \hat{M}g_i =  \min_{g_i \in Q} \max_{f_i \in P} f_i^T \hat{M}g_i
+\end{aligned}
+$$
+Next, blackwell claims that given an arbitrary vector $\mathbf{x}\in \mathbb{R}^N$ not in set S, there exists a vector
+$\mathbf{y} \in S$ such that $\textbf{y}$ is the closest point in $S$ to $\mathbf{x}$. If for
+every $\mathbf{x} \notin S$ there exists a strategy $p$ such that the convex hull of $s$ points of $R(p) = convexHull(p\hat{M}) \subseteq \mathcal{H}$.
+Where $\mathcal{H} = \{\mathbf{z} | (\mathbf{y} - \mathbf{z} )\cdot (\mathbf{y} - \mathbf{x}) \leq 0\}$. Then S is approachable with the sequence of
+strategies:
+$$
+f:f_n = \begin{cases}
+        p(\bar{\mathbf{x}}_n) \text{ if } \bar{\mathbf{x}}_n = \sum_{i = 1}^n \mathbf{x}_i \notin S \\
+        \text{ any strategy to remain in S otherwise}
+    \end{cases}
+$$
+
+To prove this, let us assume that for every point $\mathbf{x} \notin S$, that there exists a strategy $p(\textbf{x})$, where
+$R(p(\mathbf{x})) \subseteq \mathcal{H}$. That is, we want to prove that the average value of our sequence of strategies,
+$f:f_n$, approaches our set $S$ [@farina2023blackwell].
+
+Let $\mathbf{y}_i$ be the closest point from $S$ to $\bar{\mathbf{x}}_i$. Then, let $\mathbf{u}_n = \mathbf{y}_n - \bar{\mathbf{x}}_n$.
+Next, define the halfspace: $\mathcal{H}_n = \{\mathbf{z} | (\mathbf{y}_n - \mathbf{z} )\cdot \mathbf{u}_n \leq 0\}$.
+
+$$
+\begin{aligned}
+    &\bar{\mathbf{x}}_{n+1} = \frac{n}{n+1} \bar{\mathbf{x}}_n + \frac{1}{n+1}\mathbf{x}_{n+1},\\
+    &\|\mathbf{y}_{n} - \bar{\mathbf{x}}_{n+1}\|^2_2 = \|\mathbf{y}_{n} - (\frac{n}{n+1} \bar{\mathbf{x}}_n + \frac{1}{n+1}\mathbf{x}_{n+1})\|^2_2 = \\
+    & \|\mathbf{y}_{n} - \frac{n}{n+1} \bar{\mathbf{x}}_n - \frac{1}{n+1}\mathbf{x}_{n+1})\|^2_2 = \\
+    & \|\frac{n}{n+1}(\mathbf{y}_{n} -  \bar{\mathbf{x}}_n) + \frac{1}{n+1}(\mathbf{y}_n - \mathbf{x}_{n+1})\|^2_2
+\end{aligned}
+$$
+
+Given two arbitrary vectors $\mathbf{u}$ and $\mathbf{v}$, $\|\mathbf{u} + \mathbf{v}\|^2_2 = \|\mathbf{u}\|^2_2 + \|\mathbf{v}\|^2_2 + 2(\mathbf{u} \cdot \mathbf{v})$
+
+$$
+\begin{aligned}
+    & \|\frac{n}{n+1}(\mathbf{y}_{n} -  \bar{\mathbf{x}}_n) + \frac{1}{n+1}(\mathbf{y}_n - \mathbf{x}_{n+1})\|^2_2 = \\
+    &\frac{n^2}{(n+1)^2}\|\mathbf{u}_n\|^2_2 + \frac{1}{(n+1)^2}\|\mathbf{y}_n - \mathbf{x}_{n+1} \|^2_2 + \frac{2n}{n+1}(\mathbf{u}_n \cdot (\mathbf{y_n} - \mathbf{x}_{n+1}))
+\end{aligned}
+$$
+By our assumption, we know that:
+$$
+\begin{aligned}
+    &\mathbf{x}_{n+1} \in \mathcal{H}_n  \\
+    \implies &(\mathbf{y}_n - \mathbf{x}_{n+1}) \cdot \mathbf{u}_n \leq 0  \\
+    \implies &\|\mathbf{y}_n - \bar{\mathbf{x}}_{n+1}\|^2_2 \leq  \frac{n^2}{(n+1)^2}\|\mathbf{u}_n\|^2_2 + \frac{1}{(n+1)^2}\|\mathbf{y}_n - \mathbf{x}_{n+1} \|^2_2
+\end{aligned}
+$$
+The value $\mathbf{x}_{n+1}$ is bounded by the possible utilities we can recieve from our game. Thus, given the game, we can
+bound $\|\mathbf{y}_n - \mathbf{x}_{n+1} \|^2_2 \leq \Omega^2$.
+$$
+\begin{aligned}
+    &\|\mathbf{y}_n - \bar{\mathbf{x}}_{n+1}\|^2_2 \leq  \frac{n^2}{(n+1)^2}\|\mathbf{u}_n\|^2_2 + \frac{\Omega^2}{(n+1)^2} \\
+    \implies &\|\mathbf{u}_{n+1}\|^2_2 \leq \frac{n^2}{(n+1)^2}\|\mathbf{u}_n\|^2_2 + \frac{\Omega^2}{(n+1)^2} \\
+     \Leftrightarrow \quad &(n+1)^2\|\mathbf{u}_{n+1}\|^2_2 - n^2\|\mathbf{u}_n\|^2_2 \leq \Omega^2
+\end{aligned}
+$$
+Telescoping terms from $i = 0 ... n - 1$ results in [@farina2023blackwell]:
+
+$$
+\begin{aligned}
+    &(n+1)^2\|\mathbf{u}_{n+1}\|^2_2 \leq n \Omega ^2 \\
+    \Leftrightarrow \quad &\|\mathbf{u}_{n+1}\|_2  \leq \frac{\sqrt{n}\Omega}{n+1}
+\end{aligned}
+$$
+Which implies that when we assume $S$ is approachable, we converge to $S$ at a rate of $O(1/\sqrt{n})$ by playing strategy
+$f:f_n$.
+
+# References
+
