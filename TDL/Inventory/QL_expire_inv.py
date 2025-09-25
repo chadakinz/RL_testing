@@ -274,7 +274,3 @@ if __name__ == "__main__":
     #reward_v_time(time, reward_l[0])
     change_reward_v_time(time1, average_cost[0])
     change_reward_v_time(time2, average_cost[1])
-    #aco_v_acs_v_act(np.average(t_o[0]), np.average(t_s[0]), average_cost[0][-1])
-
-
-    #state_action_value_map(model_2.state_actions)

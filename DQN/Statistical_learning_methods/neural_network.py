@@ -1,86 +1,99 @@
-
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+from tqdm import tqdm
 class NeuralNetwork:
-    def __init__(self, data, prediction, hidden_layer_size, output_layer_size):
-        x_rows, x_cols = data.shape
-        y_rows, y_cols = prediction.shape
-        sample_size = round(x_cols * .8)
+    """Neural Network with one hidden layer"""
+    def __init__(self, data_size, classification_size, hidden_layer_size, dec_rate = 1):
+        """
+        Initialize the weights and hyperparameters of the neural network using arbitrary data size
+        """
+        self.hidden_layer_weights = np.random.uniform(0, 1, size=(data_size + 1, hidden_layer_size))
+        self.output_layer_weights = np.random.uniform(0, 1, size=(hidden_layer_size + 1, classification_size))
+        self.dec_rate = dec_rate
+
+    def initialize_data(self, data, classification, train_amount):
+        """
+        Gives the neural network the data to create the training and testing sets
+        """
+        x_cols, x_rows = data.shape
+        sample_size = round(x_cols * train_amount)
         self.x_train, self.x_test = data[:sample_size, :], data[sample_size:, :]
-        self.y_train, self.y_test = prediction[:sample_size, :], prediction[sample_size:, :]
-        self.hidden_layer_weights = self.create_weights(x_rows, hidden_layer_size)
-        self.output_layer_weights = self.create_weights(y_rows, output_layer_size)
+        self.y_train, self.y_test = classification[:sample_size, :], classification[sample_size:, :]
+        self.x_train = self.x_train.T
+        self.x_test = self.x_test.T
+        self.y_train = self.y_train.T
+        self.y_test = self.y_test.T
+
+    def train(self, r):
 
 
-    """Creates matrix for weights not transposed, where x: p x N, hidden layer: p x M"""
-    def create_weights(self, dim, size):
-        return np.random.randint(0, 1, size=(dim + 1,size))
-
-    def sigmoid(self,v):
-        return 1 / (1 + (1/(math.e ** v)))
-
-    def train_neural_network(self, r):
-        R = []
-
-        for j in range(1,r +1):
-            R = []
-
+        for j in tqdm(range(r)):
             for i in range(self.x_train.shape[1]):
                 X = self.x_train[:, i]
-
                 Y = self.y_train[:, i]
-                Z = self.input_to_hidden(X)
+                Z, A = self.input_to_hidden(X)
                 T = self.hidden_to_output(Z)
-                g = self.output_vector(T)
-                ga_h = (Y, Z, T, g, X, [])
-                R.append(ga_h)
-            self.gradient_descent(R)
+                g = self.softmax(T)
 
-    def gradient_descent(self, R):
+                dg_dT = np.diag(g/T) - np.outer(g, g/T)
+                drel_dA = np.array([1 if x > 0 else 0 for x in A])
+                dR_dg = -2/10 * (Y - g)
+                S = dg_dT @ dR_dg
+                L = np.matmul(self.output_layer_weights[1:], S) * drel_dA
 
-        sum_e = sum(e_T)
-        for i in range(len(R)):
-            Y, Z, T, g, X = R[i][0], R[i][1], R[i][2], R[i][3], R[i][4]
-            e_T = [math.e ** T[i] for i in range(T.shape[0])]
+                self.output_layer_weights[1:] -=  (self.dec_rate) * np.matmul(Z[:, np.newaxis], (S[:, np.newaxis].T))
+                self.output_layer_weights[0] -= (self.dec_rate) * S
 
-            for l in range(self.output_layer_weights.shape[0]):
-                Y, Z, T, g, X = R[i][0], R[i][1], R[i][2], R[i][3], R[i][4]
-                e_T = [math.e ** T[i] for i in range(T.shape[0])]
-                C = sum(e_T) - e_T[j]
-                self.output_layer_weights[l][i] -= -2 * (Y[j] - g[j]) *((C * e_T[j])/((e_T[j] + C)**2)) * self.hidden_layer_weights.shape[j][i] * X[l]
-
-            for j in range(self.hidden_layer_weights.shape[0]):
-                C = sum(e_T) - e_T[j]
-                self.hidden_layer_weights.shape[j][i] -= -2 * (Y[j] - g[j]) *((C * e_T[j])/((e_T[j] + C)**2)) * Z[j]
+                self.hidden_layer_weights[0] -= (self.dec_rate) * L
+                self.hidden_layer_weights[1:] -= (self.dec_rate) * np.matmul(X[:, np.newaxis], L[:, np.newaxis].T)
 
 
     def input_to_hidden(self, X):
-        size = self.hidden_layer_weights.shape[1]
-        w = self.hidden_layer_weights
-        Z = np.zeros((size, 1))
-        for i in range(size):
-            Z[i] = self.sigmoid(w[0][i] + np.matmul(w[1:, :].transpose(), X))
-        return Z
+        """
+        Applies weights and biases to the input vector X and returns vector Z = vector reLU(A)
+        Returns both Z and A for partial derivative calculations in gradient descent.
+        :param X:
+        :return: Z, A
+        """
+        biases = self.hidden_layer_weights[0]
+        weights = self.hidden_layer_weights[1:]
+        A = biases + (weights.T @ X)
+        reLU = np.vectorize(lambda x: np.maximum(0, x))
+        Z = reLU(A)
+        return Z, A
 
     def hidden_to_output(self, Z):
-        size = self.output_layer_weights.shape[1]
-        w = self.output_layer_weights
-        T = np.zeros((size, 1))
-        for i in range(size):
-            T[i] = w[0][i] + np.matmul(w[1:, :].transpose(), Z)
-        return T
-    def output_vector(self, T):
-        size = T.shape[0]
-        e_T = [math.e ** T[i] for i in range(size)]
-        sum_e = sum(e_T)
-        g = np.zeros((size, 1))
-        for i in range(size):
-            g[i] = e_T[i]/sum_e
-        return g
+        """
+        Takes vector Z output from the hidden layer, and outputs vector T.
+        """
+        biases = self.output_layer_weights[0]
+        weights = self.output_layer_weights[1:]
+        T = biases + (weights.T @ Z)
+        normalize = np.vectorize(lambda x: np.maximum(1, x))
+        return normalize(T)
+    def softmax(self, T):
+        """
+        Apply softmax activation to our output vector T and get the distribution of our classification predictions
+        as probabilities from [0, 1]. Apply the log function to vector T in order to prevent divergence and
+        return vector g.
+        """
+        exp_T = np.exp(np.log(T))
+        return exp_T / np.sum(exp_T)
 
-    def sum_diff_squared(self, Y, g):
-        accum = 0
-        for i in range(Y.shape[0]):
-            accum += (Y[i] - g[i]) ** 2
-        return accum
+    def test(self):
+        count = 0
+        #classifications = [x for x in range(10)]
+        for i in range(self.x_test.shape[1]):
+            X = self.x_test[:, i]
+            Y = self.y_test[:, i]
+            Z, A = self.input_to_hidden(X)
+            T = self.hidden_to_output(Z)
+            g = self.softmax(T)
+
+            #if np.random.choice(classifications, p = g, size = 1)[0] == np.argmax(Y):
+            if np.argmax(g) == np.argmax(Y):
+
+                count += 1
+
+        print(f"Accuracy: {count/self.x_test.shape[1]}")

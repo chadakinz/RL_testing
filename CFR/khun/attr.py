@@ -35,13 +35,15 @@ class Chance:
             return np.random.choice(deck, p = [1/2, 1/2], size = 1)[0]
 
 class Player:
-    def __init__(self, i, epsilon = .6):
+    def __init__(self, i, epsilon = .6, a_pol = None, play_average_pol = False):
         self.i = i
         self.c_Regret = Dict()  # Dictionary storing the cumulative regret for each action in every infoset.
         self.stake = 0  # How many chips we have staked in a given history
         self.I = None  # The infoset of player
         self.count = 0  # Counts how many nodes have been touched during our experiment
         self.c_Pol = Dict()  # Dictionary storing action distribution at each epoch T cumulatively.
+        self.play_average_pol = play_average_pol
+        self.average_pol = a_pol
 
 
     def update(self, I, a, r):
@@ -65,7 +67,10 @@ class Player:
         return [x for x in self.c_Regret[I].keys()]
     def sample(self, I):
         """Uses regret matching to sample an action at the given infoset """
-        return np.random.choice(self.get_actions(I), p = self.get_distribution(I), size = 1)[0]
+        if self.play_average_pol:
+            return np.random.choice(self.get_actions(I), p = list(self.average_pol[I].values()), size = 1)[0]
+        else:
+            return np.random.choice(self.get_actions(I), p = self.get_distribution(I), size = 1)[0]
     def get_random_distribution(self, I):
         """Used for cases when cumulative regret is below 0, or no actions have been sampled at the given infoset"""
         return [1/len(self.c_Regret[I]) for i in range(len(self.c_Regret[I]))]

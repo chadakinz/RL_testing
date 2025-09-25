@@ -10,6 +10,7 @@ def traverse(history, i, curr_player, players):
     if curr_player == i:
         action_utilities = dict()
         counterfactual_value = 0
+
         for a in players[i].c_Regret[infoset].keys():
             next_history = update_history(history, a)
             action_utilities[a] = traverse(next_history, i, get_next_turn(next_history), players)
@@ -19,6 +20,7 @@ def traverse(history, i, curr_player, players):
             regret = action_utilities[a] - counterfactual_value
             players[i].update(infoset, a, regret)
 
+
         return counterfactual_value
 
     else:
@@ -27,7 +29,7 @@ def traverse(history, i, curr_player, players):
             prob = players[curr_player].get_action_probability(infoset, a)
             players[curr_player].accum_pol(infoset, a, prob)
 
-        else:  a = players['c'].sample(history)
+        else: a = players['c'].sample(history)
 
         next_history = update_history(history, a)
         next_player = get_next_turn(next_history)
@@ -35,7 +37,9 @@ def traverse(history, i, curr_player, players):
         return traverse(next_history, i, next_player, players)
 
 
+
 if __name__ == '__main__':
+
     players = {1: Player(1), 2: Player(2), 'c': Chance()}
 
     for t in tqdm(range(100000)):
@@ -45,6 +49,9 @@ if __name__ == '__main__':
     print(players[1].count)
     print(players[2].get_average_strategy())
     print(players[2].count)
+
+
+
 
 
 
